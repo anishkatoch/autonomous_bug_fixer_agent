@@ -24,6 +24,7 @@ from test_utils import run_tests, parse_test_results, format_failure_for_agent
 from git_utils import create_snapshot, revert_to_snapshot, get_diff
 from cost_tracker import track_tokens
 from config_loader import get_claude_model_for_iteration, setup_anthropic_llm
+from cost_tracker import is_over_budget
 
 
 # ============== TOOL INPUT SCHEMAS ==============
@@ -376,6 +377,11 @@ def fix_bugs_with_crew(repo_path, failures, max_iterations=10, config=None):
             log_info("All bugs fixed!")
             break
 
+        # Budget check
+        if is_over_budget():
+            log_error("BUDGET EXCEEDED! Stopping CrewAI bug fixer.")
+            break
+
         failure = failures[0]
         test_name = failure['test_name']
 
@@ -436,8 +442,31 @@ def fix_bugs_with_crew(repo_path, failures, max_iterations=10, config=None):
             failures = new_results['failures']
 
         except Exception as e:
+            error_msg = str(e).lower()
             log_error(f"CrewAI error for {test_name}: {e}")
-            failures.pop(0)
+
+            # Check if the fix was applied before the crash
+            log_info("Checking if fix was applied before error...")
+            test_output = run_tests(repo_path)
+            new_results = parse_test_results(test_output, repo_path)
+
+            test_still_failing = any(
+                f['test_name'] == test_name for f in new_results['failures']
+            )
+
+            if not test_still_failing:
+                log_info(f"[OK] Fix was applied before error - {test_name} is fixed!")
+                bugs_fixed += 1
+                failures = new_results['failures']
+            elif 'rate_limit' in error_msg or 'rate limit' in error_msg:
+                log_warning(f"[RATE LIMIT] Waiting 65s before retrying...")
+                import time
+                time.sleep(65)
+                # Don't pop - retry the same bug
+                failures = new_results['failures']
+            else:
+                failures.pop(0)
+
             continue
 
     return bugs_fixed

@@ -5,10 +5,24 @@ No classes - just simple functions!
 """
 
 import os
+from typing import ClassVar, List
 from pathlib import Path
 from dotenv import load_dotenv
 from langchain_core.language_models.chat_models import BaseChatModel
 from langchain_core.messages import BaseMessage
+
+# Error keywords that trigger fallback (balance, auth, rate limit, etc.)
+_FALLBACK_KEYWORDS = [
+    'auth', 'api key', 'credit', 'balance', 'quota', 'billing',
+    'rate limit', '401', '403', '429', '402', '500', '502', '503',
+    'overloaded', 'insufficient', 'invalid api', 'expired',
+    'connection', 'timeout', 'refused'
+]
+
+
+def _is_fallback_error(error_msg):
+    """Check if an error should trigger fallback"""
+    return any(keyword in error_msg.lower() for keyword in _FALLBACK_KEYWORDS)
 
 
 class FallbackLLM(BaseChatModel):
@@ -27,41 +41,56 @@ class FallbackLLM(BaseChatModel):
             try:
                 return self.primary._generate(messages, stop=stop, run_manager=run_manager, **kwargs)
             except Exception as e:
-                error_msg = str(e).lower()
-                # Catch auth errors, rate limits, insufficient balance, server errors
-                if any(keyword in error_msg for keyword in [
-                    'auth', 'api key', 'credit', 'balance', 'quota', 'billing',
-                    'rate limit', '401', '403', '429', '402', '500', '502', '503',
-                    'overloaded', 'insufficient', 'invalid api', 'expired',
-                    'connection', 'timeout', 'refused'
-                ]):
+                if _is_fallback_error(str(e)):
                     print(f"\n[FALLBACK] Anthropic failed: {e}")
                     print("[FALLBACK] Switching to OpenAI...")
                     self._using_fallback = True
-                    return self.fallback._generate(messages, stop=stop, run_manager=run_manager, **kwargs)
                 else:
                     raise
-        return self.fallback._generate(messages, stop=stop, run_manager=run_manager, **kwargs)
+
+        # Try OpenAI fallback
+        try:
+            return self.fallback._generate(messages, stop=stop, run_manager=run_manager, **kwargs)
+        except Exception as e:
+            if _is_fallback_error(str(e)):
+                raise RuntimeError(
+                    f"\n[ERROR] BOTH PROVIDERS FAILED!\n"
+                    f"  Anthropic: no balance / auth error\n"
+                    f"  OpenAI:    {e}\n\n"
+                    f"  Please check your API keys and billing:\n"
+                    f"    Anthropic: https://console.anthropic.com/settings/billing\n"
+                    f"    OpenAI:    https://platform.openai.com/account/billing\n\n"
+                    f"  PROGRAM CANNOT CONTINUE WITHOUT A WORKING API KEY."
+                )
+            raise
 
     async def _agenerate(self, messages, stop=None, run_manager=None, **kwargs):
         if not self._using_fallback:
             try:
                 return await self.primary._agenerate(messages, stop=stop, run_manager=run_manager, **kwargs)
             except Exception as e:
-                error_msg = str(e).lower()
-                if any(keyword in error_msg for keyword in [
-                    'auth', 'api key', 'credit', 'balance', 'quota', 'billing',
-                    'rate limit', '401', '403', '429', '402', '500', '502', '503',
-                    'overloaded', 'insufficient', 'invalid api', 'expired',
-                    'connection', 'timeout', 'refused'
-                ]):
+                if _is_fallback_error(str(e)):
                     print(f"\n[FALLBACK] Anthropic failed: {e}")
                     print("[FALLBACK] Switching to OpenAI...")
                     self._using_fallback = True
-                    return await self.fallback._agenerate(messages, stop=stop, run_manager=run_manager, **kwargs)
                 else:
                     raise
-        return await self.fallback._agenerate(messages, stop=stop, run_manager=run_manager, **kwargs)
+
+        # Try OpenAI fallback
+        try:
+            return await self.fallback._agenerate(messages, stop=stop, run_manager=run_manager, **kwargs)
+        except Exception as e:
+            if _is_fallback_error(str(e)):
+                raise RuntimeError(
+                    f"\n[ERROR] BOTH PROVIDERS FAILED!\n"
+                    f"  Anthropic: no balance / auth error\n"
+                    f"  OpenAI:    {e}\n\n"
+                    f"  Please check your API keys and billing:\n"
+                    f"    Anthropic: https://console.anthropic.com/settings/billing\n"
+                    f"    OpenAI:    https://platform.openai.com/account/billing\n\n"
+                    f"  PROGRAM CANNOT CONTINUE WITHOUT A WORKING API KEY."
+                )
+            raise
 
     @property
     def active_provider(self):
@@ -118,6 +147,7 @@ def load_config():
         'openai_api_key': openai_key,
         'cost_limit': float(os.getenv('COST_LIMIT', '5.0')),
         'max_iterations': int(os.getenv('MAX_ITERATIONS', '20')),
+        'max_attempts_per_bug': int(os.getenv('MAX_ATTEMPTS_PER_BUG', '5')),
         'output_dir': os.getenv('OUTPUT_DIR', './output'),
         'log_level': os.getenv('LOG_LEVEL', 'INFO')
     }
@@ -172,24 +202,24 @@ def get_claude_model_for_iteration(iteration):
     """
     Get the Claude model to use based on the current iteration (0-indexed).
 
-    Rotation schedule:
-      Iterations 0-1: claude-sonnet-4-20250514
-      Iterations 2-3: claude-opus-4-20250514
-      Iterations 4-5: claude-3-5-sonnet-20240620
-      Iterations 6+:  claude-sonnet-4-20250514
+    Rotation schedule (1 iteration per model, then cycle back):
+      Iteration 0: claude-sonnet-4-20250514
+      Iteration 1: claude-opus-4-20250514
+      Iteration 2: claude-3-5-sonnet-20240620
+      Iteration 3+: claude-sonnet-4-20250514 (back to first)
     """
-    if iteration < 2:
-        return CLAUDE_MODEL_ROTATION[0]
-    elif iteration < 4:
-        return CLAUDE_MODEL_ROTATION[1]
-    elif iteration < 6:
-        return CLAUDE_MODEL_ROTATION[2]
+    if iteration < len(CLAUDE_MODEL_ROTATION):
+        return CLAUDE_MODEL_ROTATION[iteration]
     else:
         return CLAUDE_MODEL_ROTATION[0]
 
 
-def setup_anthropic_llm(config, model_name=None):
-    """Setup Anthropic Claude LLM"""
+def setup_anthropic_llm(config, model_name=None, with_fallback=True):
+    """
+    Setup Anthropic Claude LLM.
+    If with_fallback=True and OpenAI key is available, wraps in FallbackLLM
+    so it automatically switches to OpenAI if Claude has no balance.
+    """
     try:
         from langchain_anthropic import ChatAnthropic
 
@@ -201,6 +231,14 @@ def setup_anthropic_llm(config, model_name=None):
             max_tokens=4096
         )
         print(f"[OK] Anthropic Claude ready (model: {model})")
+
+        # Wrap with fallback if OpenAI key is available
+        if with_fallback and config.get('openai_api_key'):
+            openai_llm = setup_openai_llm(config)
+            if openai_llm:
+                print(f"[OK] Fallback enabled for {model}: Anthropic -> OpenAI")
+                return FallbackLLM(primary=llm, fallback=openai_llm)
+
         return llm
 
     except ImportError:

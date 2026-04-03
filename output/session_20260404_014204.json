@@ -1,0 +1,97 @@
+{
+  "session_id": "session_20260404_014204",
+  "timestamp": "2026-04-04T01:42:04.357359",
+  "results": {
+    "initial": {
+      "total": 10,
+      "passed": 4,
+      "failed": 6,
+      "skipped": 0,
+      "failures": [
+        {
+          "test_name": "test_search_bugs.py::test_csv_loader_finds_required_columns",
+          "test_file": "test_search_bugs.py",
+          "error_message": "E   RuntimeError: CSV not found: dummy.csv",
+          "traceback": "test_search_bugs.py:94: in test_csv_loader_finds_required_columns\n    result = search_module.load_products_from_csv('dummy.csv')\n             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nsearch_engine_fastapi.py:66: in load_products_from_csv\n    raise RuntimeError(f\"CSV not found: {path}\")\nE   RuntimeError: CSV not found: dummy.csv"
+        },
+        {
+          "test_name": "test_search_bugs.py::test_bug_1_normalize_matrix_wrong_axis",
+          "test_file": "test_search_bugs.py",
+          "error_message": "E    +  where 0.3960911638724425 = abs((0.6039088361275575 - 1.0))",
+          "traceback": "test_search_bugs.py:136: in test_bug_1_normalize_matrix_wrong_axis\n    assert abs(row_norm - 1.0) < 1e-6, \\\nE   AssertionError: Bug 1: Row 0 has norm 0.6039088361275575, expected 1.0 (wrong axis used)\nE   assert 0.3960911638724425 < 1e-06\nE    +  where 0.3960911638724425 = abs((0.6039088361275575 - 1.0))"
+        },
+        {
+          "test_name": "test_search_bugs.py::test_bug_2_safe_combine_missing_sku",
+          "test_file": "test_search_bugs.py",
+          "error_message": "E   RuntimeError: CSV not found: dummy.csv",
+          "traceback": "test_search_bugs.py:156: in test_bug_2_safe_combine_missing_sku\n    result = search_module.load_products_from_csv('dummy.csv')\n             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nsearch_engine_fastapi.py:66: in load_products_from_csv\n    raise RuntimeError(f\"CSV not found: {path}\")\nE   RuntimeError: CSV not found: dummy.csv"
+        },
+        {
+          "test_name": "test_search_bugs.py::test_bug_4_empty_query_not_handled",
+          "test_file": "test_search_bugs.py",
+          "error_message": "E   assert ('if not query.strip()' in '@app.get(\"/search\", response_model=SearchResponse)\\ndef search(query: str):\\n    if not is_ready:\\n        raise HTTPException(status_code=503, detail=\"Service not ready\")\\n\\n    # BUG 4: Not checking for empty query (should return empty results)\\n    # Missing the empty query check completely\\n\\n    q_vec = normalize_vector(embed_query(query.strip()))\\n    sims = embeddings_unit @ q_vec\\n    reviews = np.array([review_counts.get(s, 0) for s in product_skus])\\n\\n    # BUG 5: Using TOP_K-1 instead of TOP_K (misses last result)\\n    order = np.lexsort((-reviews, -sims))[:TOP_K - 1]\\n\\n    results = []\\n    for i in order:\\n        sku = product_skus[i]\\n        row = products_df.loc[sku]\\n\\n        # BUG 6: Using \\'product_title\\' for both title and sku fields\\n        results.append(ProductResult(\\n            title=row.get(\"product_title\"),\\n            sku=row.get(\"product_title\"),  # WRONG! Should be \\'sku\\'\\n            total_reviews=int(reviews[i])\\n        ))\\n\\n    return SearchResponse(\\n        products=results,\\n        total_results=len(results),\\n        query=query\\n    )\\n' or 'if query.strip() == \"\"' in '@app.get(\"/search\", response_model=SearchResponse)\\ndef search(query: str):\\n    if not is_ready:\\n        raise HTTPException(status_code=503, detail=\"Service not ready\")\\n\\n    # BUG 4: Not checking for empty query (should return empty results)\\n    # Missing the empty query check completely\\n\\n    q_vec = normalize_vector(embed_query(query.strip()))\\n    sims = embeddings_unit @ q_vec\\n    reviews = np.array([review_counts.get(s, 0) for s in product_skus])\\n\\n    # BUG 5: Using TOP_K-1 instead of TOP_K (misses last result)\\n    order = np.lexsort((-reviews, -sims))[:TOP_K - 1]\\n\\n    results = []\\n    for i in order:\\n        sku = product_skus[i]\\n        row = products_df.loc[sku]\\n\\n        # BUG 6: Using \\'product_title\\' for both title and sku fields\\n        results.append(ProductResult(\\n            title=row.get(\"product_title\"),\\n            sku=row.get(\"product_title\"),  # WRONG! Should be \\'sku\\'\\n            total_reviews=int(reviews[i])\\n        ))\\n\\n    return SearchResponse(\\n        products=results,\\n        total_results=len(results),\\n        query=query\\n    )\\n')",
+          "traceback": "test_search_bugs.py:237: in test_bug_4_empty_query_not_handled\n    assert 'if not query.strip()' in source or 'if query.strip() == \"\"' in source, \\\nE   AssertionError: Bug 4: Empty query check is missing! Should check 'if not query.strip()' and return empty results\nE   assert ('if not query.strip()' in '@app.get(\"/search\", response_model=SearchResponse)\\ndef search(query: str):\\n    if not is_ready:\\n        raise HTTPException(status_code=503, detail=\"Service not ready\")\\n\\n    # BUG 4: Not checking for empty query (should return empty results)\\n    # Missing the empty query check completely\\n\\n    q_vec = normalize_vector(embed_query(query.strip()))\\n    sims = embeddings_unit @ q_vec\\n    reviews = np.array([review_counts.get(s, 0) for s in product_skus])\\n\\n    # BUG 5: Using TOP_K-1 instead of TOP_K (misses last result)\\n    order = np.lexsort((-reviews, -sims))[:TOP_K - 1]\\n\\n    results = []\\n    for i in order:\\n        sku = product_skus[i]\\n        row = products_df.loc[sku]\\n\\n        # BUG 6: Using \\'product_title\\' for both title and sku fields\\n        results.append(ProductResult(\\n            title=row.get(\"product_title\"),\\n            sku=row.get(\"product_title\"),  # WRONG! Should be \\'sku\\'\\n            total_reviews=int(reviews[i])\\n        ))\\n\\n    return SearchResponse(\\n        products=results,\\n        total_results=len(results),\\n        query=query\\n    )\\n' or 'if query.strip() == \"\"' in '@app.get(\"/search\", response_model=SearchResponse)\\ndef search(query: str):\\n    if not is_ready:\\n        raise HTTPException(status_code=503, detail=\"Service not ready\")\\n\\n    # BUG 4: Not checking for empty query (should return empty results)\\n    # Missing the empty query check completely\\n\\n    q_vec = normalize_vector(embed_query(query.strip()))\\n    sims = embeddings_unit @ q_vec\\n    reviews = np.array([review_counts.get(s, 0) for s in product_skus])\\n\\n    # BUG 5: Using TOP_K-1 instead of TOP_K (misses last result)\\n    order = np.lexsort((-reviews, -sims))[:TOP_K - 1]\\n\\n    results = []\\n    for i in order:\\n        sku = product_skus[i]\\n        row = products_df.loc[sku]\\n\\n        # BUG 6: Using \\'product_title\\' for both title and sku fields\\n        results.append(ProductResult(\\n            title=row.get(\"product_title\"),\\n            sku=row.get(\"product_title\"),  # WRONG! Should be \\'sku\\'\\n            total_reviews=int(reviews[i])\\n        ))\\n\\n    return SearchResponse(\\n        products=results,\\n        total_results=len(results),\\n        query=query\\n    )\\n')"
+        },
+        {
+          "test_name": "test_search_bugs.py::test_bug_5_missing_last_result",
+          "test_file": "test_search_bugs.py",
+          "error_message": "E    +  and   5 = search_module.TOP_K",
+          "traceback": "test_search_bugs.py:272: in test_bug_5_missing_last_result\n    assert len(result.products) == search_module.TOP_K, \\\nE   AssertionError: Bug 5: Expected 5 results but got 4. Code uses TOP_K-1 instead of TOP_K!\nE   assert 4 == 5\nE    +  where 4 = len([ProductResult(title='Product 2', sku='Product 2', total_reviews=20), ProductResult(title='Product 6', sku='Product 6', total_reviews=60), ProductResult(title='Product 5', sku='Product 5', total_reviews=50), ProductResult(title='Product 9', sku='Product 9', total_reviews=90)])\nE    +    where [ProductResult(title='Product 2', sku='Product 2', total_reviews=20), ProductResult(title='Product 6', sku='Product 6', total_reviews=60), ProductResult(title='Product 5', sku='Product 5', total_reviews=50), ProductResult(title='Product 9', sku='Product 9', total_reviews=90)] = SearchResponse(products=[ProductResult(title='Product 2', sku='Product 2', total_reviews=20), ProductResult(title='Product 6', sku='Product 6', total_reviews=60), ProductResult(title='Product 5', sku='Product 5', total_reviews=50), ProductResult(title='Product 9', sku='Product 9', total_reviews=90)], total_results=4, query='test query').products\nE    +  and   5 = search_module.TOP_K"
+        },
+        {
+          "test_name": "test_search_bugs.py::test_bug_6_sku_field_wrong_mapping",
+          "test_file": "test_search_bugs.py",
+          "error_message": "E     + Gaming Laptop 15 inch",
+          "traceback": "test_search_bugs.py:304: in test_bug_6_sku_field_wrong_mapping\n    assert first_product.sku == 'LAPTOP001', \\\nE   AssertionError: Bug 6: SKU field contains 'Gaming Laptop 15 inch' but should contain 'LAPTOP001'. The code maps 'product_title' to sku field instead of using the actual SKU!\nE   assert 'Gaming Laptop 15 inch' == 'LAPTOP001'\nE     \nE     - LAPTOP001\nE     + Gaming Laptop 15 inch"
+        }
+      ],
+      "passing_tests": [
+        "test_search_bugs.py::test_health_endpoint_basic",
+        "test_search_bugs.py::test_normalize_vector_correct",
+        "test_search_bugs.py::test_product_result_model_validation",
+        "test_search_bugs.py::test_bug_3_ready_flag_set_too_early"
+      ]
+    },
+    "final": {
+      "total": 10,
+      "passed": 8,
+      "failed": 2,
+      "skipped": 0,
+      "failures": [
+        {
+          "test_name": "test_search_bugs.py::test_csv_loader_finds_required_columns",
+          "test_file": "test_search_bugs.py",
+          "error_message": "E   RuntimeError: CSV not found: dummy.csv",
+          "traceback": "test_search_bugs.py:94: in test_csv_loader_finds_required_columns\n    result = search_module.load_products_from_csv('dummy.csv')\n             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nsearch_engine_fastapi.py:67: in load_products_from_csv\n    raise RuntimeError(f\"CSV not found: {path}\")\nE   RuntimeError: CSV not found: dummy.csv"
+        },
+        {
+          "test_name": "test_search_bugs.py::test_bug_2_safe_combine_missing_sku",
+          "test_file": "test_search_bugs.py",
+          "error_message": "E   RuntimeError: CSV not found: dummy.csv",
+          "traceback": "test_search_bugs.py:156: in test_bug_2_safe_combine_missing_sku\n    result = search_module.load_products_from_csv('dummy.csv')\n             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nsearch_engine_fastapi.py:67: in load_products_from_csv\n    raise RuntimeError(f\"CSV not found: {path}\")\nE   RuntimeError: CSV not found: dummy.csv"
+        }
+      ],
+      "passing_tests": [
+        "test_search_bugs.py::test_health_endpoint_basic",
+        "test_search_bugs.py::test_normalize_vector_correct",
+        "test_search_bugs.py::test_product_result_model_validation",
+        "test_search_bugs.py::test_bug_1_normalize_matrix_wrong_axis",
+        "test_search_bugs.py::test_bug_3_ready_flag_set_too_early",
+        "test_search_bugs.py::test_bug_4_empty_query_not_handled",
+        "test_search_bugs.py::test_bug_5_missing_last_result",
+        "test_search_bugs.py::test_bug_6_sku_field_wrong_mapping"
+      ]
+    },
+    "cost": {
+      "total_cost": 0.0,
+      "total_tokens": 0,
+      "budget_limit": 5.0,
+      "budget_remaining": 5.0,
+      "total_requests": 0,
+      "average_cost_per_request": 0,
+      "over_budget": false,
+      "provider": "anthropic"
+    },
+    "duration": 960.32475
+  }
+}

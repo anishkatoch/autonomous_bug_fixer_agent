@@ -1,37 +1,51 @@
 # Autonomous Bug Fixer - Python Dependencies
 # Install with: pip install -r requirements.txt
 
-# ============== CrewAI & LangChain ==============
-crewai>=0.28.0
-crewai-tools>=0.4.0
-langchain>=0.1.0
+# ============== REQUIRED (Core) ==============
+# These are needed for the bug fixer to run
+
+# Environment variable loading
+python-dotenv>=1.0.0
+
+# LangChain core (base classes for LLM wrapper)
 langchain-core>=0.1.0
 
-# ============== LLM Providers ==============
-# Install based on which provider you're using
-
-# For Anthropic Claude (recommended)
+# Anthropic Claude (primary LLM provider)
 langchain-anthropic>=0.1.0
 anthropic>=0.18.0
 
-# For OpenAI GPT (alternative)
+# OpenAI GPT (fallback LLM provider)
 langchain-openai>=0.0.5
 openai>=1.0.0
 
-# ============== Testing ==============
+# Testing framework
 pytest>=7.4.0
+pytest-json-report>=1.5.0
+
+# Data validation (used by CrewAI tools)
+pydantic>=2.0.0
+
+# ============== REQUIRED (CrewAI - for escalation) ==============
+# These are needed for the multi-agent system (attempt 4-5)
+# Without these, the bug fixer still works but only uses direct LLM
+
+crewai>=0.28.0
+crewai-tools>=0.4.0
+
+# ============== REQUIRED (for testing target: search_engine_fastapi.py) ==============
+# These are needed by the buggy code being tested
+
+numpy>=1.24.0
+pandas>=2.0.0
+fastapi>=0.100.0
+uvicorn>=0.23.0
+sentence-transformers>=2.2.0
+
+# ============== OPTIONAL ==============
+# Nice to have but not required
+
+# Async test support
 pytest-asyncio>=0.21.0
-pytest-json-report>=1.5.0
 
-# ============== Utilities ==============
-python-dotenv>=1.0.0
-pathlib>=1.0.1
-
-# ============== Optional ==============
-# For better code analysis
-pylint>=2.17.0
-bandit>=1.7.5
-
-pytest>=7.4.0
-pytest-json-report>=1.5.0
- 
+# Git (must be installed on system, not pip)
+# Install from: https://git-scm.com/downloads
