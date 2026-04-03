@@ -1,0 +1,37 @@
+# Autonomous Bug Fixer - Python Dependencies
+# Install with: pip install -r requirements.txt
+
+# ============== CrewAI & LangChain ==============
+crewai>=0.28.0
+crewai-tools>=0.4.0
+langchain>=0.1.0
+langchain-core>=0.1.0
+
+# ============== LLM Providers ==============
+# Install based on which provider you're using
+
+# For Anthropic Claude (recommended)
+langchain-anthropic>=0.1.0
+anthropic>=0.18.0
+
+# For OpenAI GPT (alternative)
+langchain-openai>=0.0.5
+openai>=1.0.0
+
+# ============== Testing ==============
+pytest>=7.4.0
+pytest-asyncio>=0.21.0
+pytest-json-report>=1.5.0
+
+# ============== Utilities ==============
+python-dotenv>=1.0.0
+pathlib>=1.0.1
+
+# ============== Optional ==============
+# For better code analysis
+pylint>=2.17.0
+bandit>=1.7.5
+
+pytest>=7.4.0
+pytest-json-report>=1.5.0
+ 
